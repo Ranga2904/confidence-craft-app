@@ -66,8 +66,8 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>ConfidenceBoost</h1>
-        <p>Transform your messages to sound more confident and assertive</p>
+        <h1>Confidence Craft</h1>
+        <p>Transform your messages to sound confident whether for that special someone or at work!</p>
         <p className="usage-counter">Daily usage: {usageCount}/10</p>
       </header>
 
