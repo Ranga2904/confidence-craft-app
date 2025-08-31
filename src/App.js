@@ -24,12 +24,42 @@ function App() {
     setIsLoading(true);
 
     // Create the prompt based on context
-    let prompt = '';
-    if (selectedContext === 'dating') {
-      prompt = `Rewrite this message to sound more confident and engaging while maintaining authenticity. Remove uncertainty phrases and make it more direct but not aggressive: "${inputText}"`;
-    } else {
-      prompt = `Rewrite this professional message to sound more assertive and confident. Remove hedging language, strengthen the tone, and make requests clearer: "${inputText}"`;
-    }
+let systemMessage = '';
+let userPrompt = '';
+
+if (selectedContext === 'dating') {
+  systemMessage = 'You are a confident dating coach who helps people communicate with attractive self-assurance. You make messages warmer and more direct without being pushy.';
+  
+  userPrompt = `Transform this dating message to sound confident and engaging.
+
+REMOVE weak phrases: "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just"
+
+EXAMPLE TRANSFORMATIONS:
+• "Maybe we could hang out?" → "I'd love to spend time with you."
+• "Sorry to text, but..." → Remove "sorry" entirely
+• "If you want to" → "Let's"
+
+Transform this message: "${inputText}"
+
+Return ONLY the improved message with no explanations.`;
+
+} else {
+  systemMessage = 'You are an executive communication coach who helps people sound authoritative and professional while remaining respectful.';
+  
+  userPrompt = `Transform this professional message to sound assertive and confident.
+
+REMOVE weak phrases: "I think", "maybe", "perhaps", "if possible", "sorry to bother", "I hope", "I was wondering", "just checking"
+
+STRENGTHEN with confident alternatives:
+• "I think we should" → "I recommend"
+• "I hope you could" → "Please"
+• "If possible" → Set clear expectations
+• "Sorry to bother" → Remove entirely
+
+Transform this message: "${inputText}"
+
+Return ONLY the professional rewrite with no explanations.`;
+}
 
     try {
       // Call OpenAI API
@@ -41,8 +71,10 @@ function App() {
         },
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 200
+          messages: [
+            { role: 'user', content: userPrompt },
+            { role: 'system', content: systemMessage }],
+          max_tokens: 150
         })
       });
 
