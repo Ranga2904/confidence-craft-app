@@ -67,7 +67,7 @@ Return ONLY the professional rewrite with no explanations.`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer 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' // You'll replace this
+          'Authorization': 'Bearer ${process.env.REACT_APP_OPENAI_API_KEY}' // You'll replace this
         },
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
