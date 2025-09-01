@@ -67,13 +67,13 @@ Return ONLY the professional rewrite with no explanations.`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${process.env.REACT_APP_OPENAI_API_KEY}' // You'll replace this
+          'Authorization': `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`// You'll replace this
         },
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
           messages: [
-            { role: 'user', content: userPrompt },
-            { role: 'system', content: systemMessage }],
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: userPrompt }],
           max_tokens: 150
         })
       });
