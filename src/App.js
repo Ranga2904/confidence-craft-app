@@ -21,55 +21,167 @@ function App() {
 
     setIsLoading(true);
 
-    // Define system prompt based on context for high-quality, tuned output
+    // Create the prompt based on context
     let systemPrompt = '';
+    let userPrompt = '';
 
     if (selectedContext === 'dating') {
-      systemPrompt = `You are an expert dating coach specializing in building confidence. Transform the user's dating message to sound confident, engaging, and charismatic. Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just". Make it warmer, more direct without being pushy, and add subtle enthusiasm or empowerment if appropriate. Keep the core meaning intact but enhance for better impact. Output only the rewritten message.`;
+      systemPrompt = `You are a confident dating coach. Transform messages to sound warm, direct, and confident without being pushy. Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just".
+
+Examples:
+• "Maybe we could hang out sometime if you want?" → "I'd love to spend time with you this week."
+• "Sorry to text, but I was wondering if you're free?" → "Are you free this evening?"
+• "No pressure, but would you like to grab coffee?" → "Let's get coffee - I know a great place."
+
+Rules:
+- Remove ALL hesitant language
+- Make it warm and enthusiastic
+- Keep the same core meaning
+- End with confidence, not questions`;
+
+      userPrompt = `Transform this dating message to be confident and engaging: "${inputText}"
+
+Return ONLY the confident version with no explanations.`;
+
     } else {
-      systemPrompt = `You are an expert professional career advisor focused on boosting assertiveness. Transform the user's professional message to sound assertive, confident, and authoritative yet respectful. Remove weak phrases like "I think", "maybe", "perhaps", "if possible", "sorry to bother", "I hope", "I was wondering", "just checking". Emphasize clarity, leadership, and value. Keep the core meaning intact but polish for career impact. Output only the rewritten message.`;
+      systemPrompt = `You are an executive communication coach. Transform messages to sound authoritative, professional, and confident while remaining respectful. Remove weak phrases like "I think", "maybe", "perhaps", "if possible", "sorry to bother", "I hope", "I was wondering".
+
+Examples:
+• "I was hoping we could possibly discuss the project?" → "Let's schedule time to discuss the project."
+• "Sorry to bother, but I think we should maybe review this" → "I recommend we review this immediately."
+• "If possible, could we perhaps meet?" → "Please schedule a meeting at your earliest convenience."
+
+Rules:
+- Remove ALL uncertain language
+- Make requests direct and clear
+- Use authoritative but respectful tone
+- Be specific about next steps`;
+
+      userPrompt = `Transform this professional message to be assertive and confident: "${inputText}"
+
+Return ONLY the professional version with no explanations.`;
     }
 
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // Using Google Gemini API (FREE with generous limits)
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer YOUR_GROQ_API_KEY_HERE', // Replace with your actual Groq API key from console.groq.com
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-70b-versatile', // High-quality model for nuanced, context-aware responses
-          messages: [
+          contents: [
             {
-              role: 'system',
-              content: systemPrompt,
-            },
-            {
-              role: 'user',
-              content: `Original: "${inputText}"`,
-            },
+              parts: [
+                { text: systemPrompt },
+                { text: userPrompt }
+              ]
+            }
           ],
-          max_tokens: 300, // Sufficient for detailed rewrites without excess
-          temperature: 0.7, // Balanced creativity: Engaging variations without randomness
-          top_p: 0.9, // Focuses on high-probability, diverse outputs
-          presence_penalty: 0.2, // Encourages fresh phrasing
-          frequency_penalty: 0.3, // Reduces repetition for polished results
-        }),
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 200,
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error('Gemini API Error:', errorData);
+        
+        if (response.status === 403) {
+          throw new Error('Invalid API key. Please check your Gemini API key.');
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again in a moment.');
+        } else {
+          throw new Error(`API Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+        }
       }
 
       const data = await response.json();
-      setOutputText(data.choices[0].message.content.trim()); // Trim for clean output
-      setUsageCount(usageCount + 1);
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const generatedText = data.candidates[0].content.parts[0].text.trim();
+        setOutputText(generatedText);
+        setUsageCount(usageCount + 1);
+      } else {
+        throw new Error('Unexpected response format from Gemini API');
+      }
+
     } catch (error) {
       console.error('Error:', error);
-      alert('Something went wrong with the API. Please try again later.');
+      alert(`Error: ${error.message}`);
+      
+      // Smart fallback if API fails
+      const fallbackResult = generateSmartFallback(inputText, selectedContext);
+      setOutputText(fallbackResult);
+      setUsageCount(usageCount + 1);
     }
 
     setIsLoading(false);
+  };
+
+  // Enhanced fallback system
+  const generateSmartFallback = (text, context) => {
+    let result = text.trim();
+    
+    // Remove weak phrases
+    const weakPhrases = [
+      'maybe', 'perhaps', 'possibly', 'if you want', 'no pressure',
+      'sorry to bother', 'sorry', 'just', 'i guess', 'kind of',
+      'i was wondering if', 'if possible', 'i was hoping'
+    ];
+    
+    weakPhrases.forEach(weak => {
+      result = result.replace(new RegExp(`\\b${weak}\\b`, 'gi'), '');
+    });
+    
+    // Transform weak to strong
+    const transformations = {
+      'i think': 'I believe',
+      'i hope': 'I\'d love',
+      'could we': 'let\'s',
+      'would you like to': 'let\'s',
+      'can we': 'let\'s',
+      'we should probably': 'we should'
+    };
+    
+    Object.keys(transformations).forEach(weak => {
+      result = result.replace(new RegExp(`\\b${weak}\\b`, 'gi'), transformations[weak]);
+    });
+    
+    // Context-specific improvements
+    if (context === 'dating') {
+      result = result.replace(/\?+/g, '.');
+      if (!result.match(/(love|excited|looking forward)/i)) {
+        result = result.replace(/\.$/, ' - I\'m excited about this!');
+      }
+    } else {
+      result = result.replace(/could you please/gi, 'please');
+      result = result.replace(/would you mind/gi, 'please');
+    }
+    
+    // Clean up and capitalize
+    result = result.replace(/\s+/g, ' ').trim();
+    result = result.charAt(0).toUpperCase() + result.slice(1);
+    
+    if (!result.match(/[.!]$/)) {
+      result += '.';
+    }
+    
+    return result.length > 10 ? result : text;
   };
 
   const copyToClipboard = () => {
@@ -138,4 +250,3 @@ function App() {
 }
 
 export default App;
-	
