@@ -21,143 +21,55 @@ function App() {
 
     setIsLoading(true);
 
-    // Create the prompt based on context
-    let prompt = '';
+    // Define system prompt based on context for high-quality, tuned output
+    let systemPrompt = '';
 
     if (selectedContext === 'dating') {
-      prompt = `Transform this dating message to sound confident and engaging. Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just". Make it warmer and more direct without being pushy.
-
-Original: "${inputText}"
-
-Confident version:`;
+      systemPrompt = `You are an expert dating coach specializing in building confidence. Transform the user's dating message to sound confident, engaging, and charismatic. Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just". Make it warmer, more direct without being pushy, and add subtle enthusiasm or empowerment if appropriate. Keep the core meaning intact but enhance for better impact. Output only the rewritten message.`;
     } else {
-      prompt = `Transform this professional message to sound assertive and confident. Remove weak phrases like "I think", "maybe", "perhaps", "if possible", "sorry to bother", "I hope", "I was wondering", "just checking". Make it authoritative yet respectful.
-
-Original: "${inputText}"
-
-Professional version:`;
+      systemPrompt = `You are an expert professional career advisor focused on boosting assertiveness. Transform the user's professional message to sound assertive, confident, and authoritative yet respectful. Remove weak phrases like "I think", "maybe", "perhaps", "if possible", "sorry to bother", "I hope", "I was wondering", "just checking". Emphasize clarity, leadership, and value. Keep the core meaning intact but polish for career impact. Output only the rewritten message.`;
     }
 
     try {
-      // Try Hugging Face API first, but mainly rely on smart fallback
-      const smartResult = generateSmartTransformation(inputText, selectedContext);
-      setOutputText(smartResult);
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer YOUR_GROQ_API_KEY_HERE', // Replace with your actual Groq API key from console.groq.com
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-70b-versatile', // High-quality model for nuanced, context-aware responses
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt,
+            },
+            {
+              role: 'user',
+              content: `Original: "${inputText}"`,
+            },
+          ],
+          max_tokens: 300, // Sufficient for detailed rewrites without excess
+          temperature: 0.7, // Balanced creativity: Engaging variations without randomness
+          top_p: 0.9, // Focuses on high-probability, diverse outputs
+          presence_penalty: 0.2, // Encourages fresh phrasing
+          frequency_penalty: 0.3, // Reduces repetition for polished results
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setOutputText(data.choices[0].message.content.trim()); // Trim for clean output
       setUsageCount(usageCount + 1);
-      
     } catch (error) {
       console.error('Error:', error);
-      
-      // Smart fallback with predefined transformations
-      const fallbackResult = generateSmartTransformation(inputText, selectedContext);
-      setOutputText(fallbackResult);
-      setUsageCount(usageCount + 1);
+      alert('Something went wrong with the API. Please try again later.');
     }
 
     setIsLoading(false);
-  };
-
-  // Advanced transformation function with real confidence building
-  const generateSmartTransformation = (text, context) => {
-    let result = text.toLowerCase().trim();
-    
-    // Remove weak phrases completely
-    const weakToRemove = [
-      'maybe', 'perhaps', 'possibly', 'if you want', 'no pressure', 
-      'sorry to bother', 'sorry', 'just', 'i guess', 'kind of', 'sort of',
-      'i was wondering if', 'if possible', 'if that\'s okay', 'if you don\'t mind'
-    ];
-    
-    weakToRemove.forEach(weak => {
-      result = result.replace(new RegExp(`\\b${weak}\\b`, 'gi'), '');
-    });
-    
-    // Transform weak phrases to strong ones
-    const transformations = {
-      'i think': 'I believe',
-      'i hope': 'I\'d love',
-      'i was hoping': 'I\'d like',
-      'could we': 'let\'s',
-      'would you like to': 'let\'s',
-      'do you want to': 'let\'s',
-      'would it be possible': 'let\'s',
-      'can we': 'let\'s',
-      'we should probably': 'we should',
-      'we might want to': 'we should',
-      'i suppose': 'I believe',
-      'i feel like': 'I think'
-    };
-    
-    Object.keys(transformations).forEach(weak => {
-      const strong = transformations[weak];
-      result = result.replace(new RegExp(`\\b${weak}\\b`, 'gi'), strong);
-    });
-    
-    // Context-specific transformations
-    if (context === 'dating') {
-      const datingTransforms = {
-        'hang out': 'spend time together',
-        'grab coffee': 'get coffee',
-        'meet up': 'meet',
-        'if you\'re free': 'when you\'re available',
-        'sometime': 'this week'
-      };
-      
-      Object.keys(datingTransforms).forEach(casual => {
-        const confident = datingTransforms[casual];
-        result = result.replace(new RegExp(`\\b${casual}\\b`, 'gi'), confident);
-      });
-      
-      // Add confident endings for dating
-      if (result.includes('?')) {
-        result = result.replace(/\?+/g, '.');
-      }
-      
-      // Add enthusiasm if missing
-      if (!result.match(/(love|excited|looking forward)/i)) {
-        result = result.replace(/\.$/, ' - I\'m looking forward to it!');
-      }
-      
-    } else {
-      // Professional context
-      const professionalTransforms = {
-        'discuss': 'review',
-        'talk about': 'discuss',
-        'go over': 'review',
-        'check in': 'follow up',
-        'touch base': 'connect',
-        'i think we should': 'I recommend we',
-        'we probably need': 'we need',
-        'it might be good': 'I recommend'
-      };
-      
-      Object.keys(professionalTransforms).forEach(weak => {
-        const strong = professionalTransforms[weak];
-        result = result.replace(new RegExp(`\\b${weak}\\b`, 'gi'), strong);
-      });
-      
-      // Make requests more direct
-      result = result.replace(/could you please/gi, 'please');
-      result = result.replace(/would you mind/gi, 'please');
-      
-      // Add professional urgency
-      if (result.includes('when you have time')) {
-        result = result.replace(/when you have time/gi, 'at your earliest convenience');
-      }
-    }
-    
-    // Clean up extra spaces and punctuation
-    result = result.replace(/\s+/g, ' ').replace(/\s+([,.!])/g, '$1').trim();
-    
-    // Capitalize properly
-    result = result.charAt(0).toUpperCase() + result.slice(1);
-    
-    // Ensure it ends with proper punctuation
-    if (!result.match(/[.!]$/)) {
-      result += '.';
-    }
-    
-    // Return original if transformation went wrong
-    return result.length > 10 ? result : text;
   };
 
   const copyToClipboard = () => {
