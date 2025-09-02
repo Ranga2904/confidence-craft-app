@@ -79,10 +79,10 @@ Return ONLY the professional version with no explanations.`;
             }
           ],
           generationConfig: {
-            temperature: 0.55,
+            temperature: 0.65,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 250,
+            maxOutputTokens: 230,
           },
           safetySettings: [
             {
