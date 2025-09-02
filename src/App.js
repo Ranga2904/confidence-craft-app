@@ -26,7 +26,7 @@ function App() {
     let userPrompt = '';
 
     if (selectedContext === 'dating') {
-      systemPrompt = `You are a confident dating coach. Transform messages to sound warm, direct, and confident without being pushy. Avoid using language that could be also used in professional settings e.g., "move forward". Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just".
+      systemPrompt = `You are a confident dating coach. Transform messages to sound warm, direct, and confident without being pushy. It is acceptable to ask questions. Avoid using language that could be also used in professional settings e.g., "move forward". Remove weak phrases like "maybe", "perhaps", "if you want", "no pressure", "sorry", "I hope", "I was wondering", "just".
 
 Examples:
 • "Maybe we could hang out sometime if you want?" → "I'd love to spend time with you this week."
@@ -79,10 +79,10 @@ Return ONLY the professional version with no explanations.`;
             }
           ],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.55,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 200,
+            maxOutputTokens: 250,
           },
           safetySettings: [
             {
