@@ -193,7 +193,7 @@ Return ONLY the professional version with no explanations.`;
     <div className="App">
       <header className="app-header">
         <h1>Confidence Craft</h1>
-        <p>Transform your messages to sound confident whether for that special someone or at work!</p>
+        <p>To help you commmunicate confidently in all your interactions, whether personal or professional!</p>
         <p className="usage-counter">Daily usage: {usageCount}/10</p>
       </header>
 
